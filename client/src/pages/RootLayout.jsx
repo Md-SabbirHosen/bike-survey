@@ -1,12 +1,11 @@
-import React, { useState } from "react";
 import { motion } from "framer-motion";
-import * as XLSX from "xlsx";
-import Header from "../components/Header";
-import PersonalInfo from "../components/PersonalInfo";
-import RankingTable from "../components/RankingTable";
-import ProductFeatures from "../components/ProductFeatures";
-import InfluenceFactors from "../components/InfluenceFactors";
+import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
+import Header from "../components/Header";
+import InfluenceFactors from "../components/InfluenceFactors";
+import PersonalInfo from "../components/PersonalInfo";
+import ProductFeatures from "../components/ProductFeatures";
+import RankingTable from "../components/RankingTable";
 
 function RootLayout() {
   const [formData, setFormData] = useState({
@@ -53,61 +52,6 @@ function RootLayout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // const wb = XLSX.utils.book_new();
-
-    // const headers = [
-    //   "Personal Information",
-    //   "",
-    //   "",
-    //   "Rankings",
-    //   ...Array(15).fill(""),
-    //   "",
-    //   "Product Features",
-    //   ...Array(15 * 3).fill(""),
-    // ];
-
-    // const subHeaders = [
-    //   "Name",
-    //   "Phone",
-    //   "Bike Type",
-    //   ...Array(15)
-    //     .fill()
-    //     .map((_, i) => `Row ${i + 1}`),
-    //   ...Array(15)
-    //     .fill()
-    //     .flatMap((_, i) => [
-    //       `Feature ${i + 1} Importance`,
-    //       `Feature ${i + 1} Satisfaction`,
-    //       `Feature ${i + 1} Fulfillment`,
-    //     ]),
-    // ];
-
-    // const rowData = [
-    //   formData.name,
-    //   formData.phone,
-    //   formData.bikeType,
-    //   ...formData.rankings.map((r) => r.rank),
-    //   ...formData.productFeatures.flatMap((f) => [
-    //     f.importanceLevel,
-    //     f.satisfactionLevel,
-    //     f.fulfillmentCapacity,
-    //   ]),
-    // ];
-
-    // const ws = XLSX.utils.aoa_to_sheet([headers, subHeaders, rowData]);
-
-    // ws["!merges"] = [
-    //   { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-    //   { s: { r: 0, c: 3 }, e: { r: 0, c: 17 } },
-    //   { s: { r: 0, c: 18 }, e: { r: 0, c: 20 } },
-    //   { s: { r: 0, c: 21 }, e: { r: 0, c: 65 } },
-    // ];
-
-    // ws["!cols"] = headers.map(() => ({ wch: 15 }));
-
-    // XLSX.utils.book_RootLayoutend_sheet(wb, ws, "Survey Data");
-    // XLSX.writeFile(wb, "survey_responses.xlsx");
 
     const surveyData = {
       name: formData.name,
