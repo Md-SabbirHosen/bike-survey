@@ -2,8 +2,13 @@ import React from "react";
 
 const DownloadSurvey = () => {
   const downloadDataHandler = () => {
-    window.open("http://localhost:8080/download-excel", "_blank");
+    const backendUrl =
+      import.meta.env.MODE === "development"
+        ? "http://localhost:8080/download-excel"
+        : "/download-excel";
+    window.open(`${backendUrl}`, "_blank");
   };
+
   return (
     <div className="text-center">
       <button

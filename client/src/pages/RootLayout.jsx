@@ -124,7 +124,12 @@ function RootLayout() {
     console.log(surveyData);
 
     try {
-      const response = await fetch("http://localhost:8080/submit-survey", {
+      const backendUrl =
+        import.meta.env.MODE === "development"
+          ? "http://localhost:8080/submit-survey"
+          : "/submit-survey";
+
+      const response = await fetch(`${backendUrl}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
