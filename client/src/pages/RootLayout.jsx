@@ -73,6 +73,7 @@ function RootLayout() {
           ? "http://localhost:8080/submit-survey"
           : "/submit-survey";
 
+      console.log(backendUrl);
       const response = await fetch(`${backendUrl}`, {
         method: "POST",
         headers: {
