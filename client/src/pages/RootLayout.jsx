@@ -6,6 +6,7 @@ import InfluenceFactors from "../components/InfluenceFactors";
 import PersonalInfo from "../components/PersonalInfo";
 import ProductFeatures from "../components/ProductFeatures";
 import RankingTable from "../components/RankingTable";
+import EVSurvery from "../components/UsersWish";
 
 function RootLayout() {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ function RootLayout() {
       satisfactionLevel: "",
       fulfillmentCapacity: "",
     }),
+    evSurvey: {},
   });
 
   const path = window.location.pathname;
@@ -50,6 +52,10 @@ function RootLayout() {
     });
   };
 
+  const evSurveyHandler = (data) => {
+    return setFormData((prev) => ({ ...prev, evSurvey: data }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -63,6 +69,7 @@ function RootLayout() {
         satisfactionLevel: f.satisfactionLevel,
         fulfillmentCapacity: f.fulfillmentCapacity,
       })),
+      evSurvey: formData.evSurvey,
     };
 
     console.log(surveyData);
@@ -112,6 +119,7 @@ function RootLayout() {
             features={formData.productFeatures}
             onChange={handleProductFeatureChange}
           />
+          <EVSurvery onGetData={evSurveyHandler} />
 
           <motion.div
             initial={{ opacity: 0 }}
