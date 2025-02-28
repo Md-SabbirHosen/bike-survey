@@ -36,8 +36,8 @@ const surveySchema = new mongoose.Schema({
 
 const Survey = mongoose.model("Survey", surveySchema);
 
-app.use(cors({ origin: "http://localhost:5173/", credentials: true }));
-// app.use(cors({ origin: "*", credentials: true }));
+// app.use(cors({ origin: "http://localhost:5173/", credentials: true }));
+app.use(cors({ origin: "*", credentials: true }));
 app.use(bodyParser.json());
 
 const excelFilePath = path.join(__dirname, "survey_data.xlsx");
@@ -234,6 +234,7 @@ app.post("/submit-survey", async (req, res) => {
     res.status(500).json({ error: "Failed to save survey data" });
   }
 });
+
 app.get("/download-excel", (req, res) => {
   res.download(excelFilePath, "survey_data.xlsx");
 });
