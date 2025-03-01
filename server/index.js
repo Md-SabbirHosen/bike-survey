@@ -102,9 +102,18 @@ app.post("/submit-survey", async (req, res) => {
     });
     await newSurvey.save();
 
-    let wb, ws;
+    res.status(200).json({ message: "Survey submitted successfully!" });
+  } catch (error) {
+    console.error("Error saving survey data:", error);
+    res.status(500).json({ error: "Failed to save survey data" });
+  }
+});
 
-    // **Product Feature Headers**
+app.get("/download-excel", async (req, res) => {
+  try {
+    const surveys = await Survey.find();
+
+    // Define headers
     const productFeatureHeadersTitle = [
       "Speed",
       "Charging time",
@@ -123,120 +132,142 @@ app.post("/submit-survey", async (req, res) => {
       "Overall satisfaction",
     ];
 
-    const productFeatureHeaders = productFeatureHeadersTitle.flatMap(
+    // Create product feature subheaders (for row 2)
+    const productFeatureSubHeaders = productFeatureHeadersTitle.flatMap(
       (feature) => [
-        `${feature} Importance Level`,
-        `${feature} Satisfaction Level`,
-        `${feature} Fulfillment Capacity`,
+        feature, // Title
+        "Importance Level",
+        "Satisfaction Level",
+        "Fulfillment Capacity",
       ]
     );
 
+    // First header row - main sections
+    const headerRow1 = [
+      "Personal Information", // spans 3 columns
+      "",
+      "",
+      "Rankings", // spans 15 columns
+      ...Array(14).fill(""),
+      "Product Features", // spans 60 columns (15 features × 4 columns each)
+      ...Array(59).fill(""),
+      "Survey Data", // spans 2 columns
+      "",
+    ];
+
+    // Second header row - column titles
     const headerRow2 = [
       "Name",
       "Phone",
       "Bike Type",
-      ...Array(15)
+      ...Array(15) // Rankings columns
         .fill("")
-        .map((_, i) => `Row ${i + 1}`), // Rankings (15 columns)
-      ...productFeatureHeaders, // Product Features (45 columns)
+        .map((_, i) => `Row ${i + 1}`),
+      ...productFeatureSubHeaders, // All product feature columns with subheaders
       "Age",
       "Buy Vehicle in Future",
     ];
 
-    // **Check if Excel File Exists**
-    if (!fs.existsSync(excelFilePath)) {
-      wb = XLSX.utils.book_new();
-      const headerRow1 = [
-        "Personal Information",
-        "",
-        "",
-        "Rankings",
-        ...Array(14).fill(""),
-        "Product Features",
-        ...Array(44).fill(""),
-        "Survey Data",
-        "",
-        "",
+    let wb, ws;
+
+    // Create new workbook with proper headers
+    wb = XLSX.utils.book_new();
+    ws = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2]);
+    XLSX.utils.book_append_sheet(wb, ws, "Survey Data");
+
+    // Process all surveys
+    for (const survey of surveys) {
+      // Ensure rankingsData has 15 columns
+      const rankingsData = Array(15)
+        .fill("")
+        .map((_, i) => {
+          return survey.rankings && survey.rankings[i]
+            ? survey.rankings[i].rank
+            : "";
+        });
+
+      // Process product features data - ensuring all 60 columns (15 features × 4 columns)
+      let productFeaturesData = [];
+
+      // Properly map through all 15 product features
+      for (let i = 0; i < 15; i++) {
+        const feature =
+          survey.productFeatures && survey.productFeatures[i]
+            ? survey.productFeatures[i]
+            : {};
+
+        productFeaturesData.push(
+          productFeatureHeadersTitle[i], // Add feature name in first column
+          feature.importanceLevel || "",
+          feature.satisfactionLevel || "",
+          feature.fulfillmentCapacity || ""
+        );
+      }
+
+      // Extract survey data correctly from the DB structure
+      const ageGroup =
+        survey.ageGroup || (survey.evSurvey ? survey.evSurvey.ageGroup : "");
+      const evChoice =
+        survey.evChoice !== undefined
+          ? survey.evChoice
+          : survey.evSurvey && survey.evSurvey.evChoice !== undefined
+            ? survey.evSurvey.evChoice
+            : "";
+
+      // Construct rowData with correct columns
+      let rowData = [
+        survey.name || "",
+        survey.phone || "",
+        survey.bikeType || "",
+        ...rankingsData,
+        ...productFeaturesData,
+        ageGroup,
+        evChoice.toString(), // Convert to string in case it's a number
       ];
-      ws = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2]);
-      XLSX.utils.book_append_sheet(wb, ws, "Survey Data");
-    } else {
-      wb = XLSX.readFile(excelFilePath);
-      ws = wb.Sheets["Survey Data"];
+
+      // Get current range & append new row
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1:A1");
+      const nextRow = range.e.r + 1;
+      XLSX.utils.sheet_add_aoa(ws, [rowData], { origin: nextRow });
+
+      console.log(`Added survey for ${survey.name || "unnamed user"}`);
     }
 
-    // **Ensure rankingsData has 15 columns**
-    const rankingsData = Array(15)
-      .fill("")
-      .map((_, i) => rankings[i]?.rank || "");
-
-    // **Ensure productFeaturesData has 45 columns**
-    let productFeaturesData = productFeatureHeadersTitle.flatMap((_, i) => {
-      return [
-        productFeatures[i]?.importanceLevel || "",
-        productFeatures[i]?.satisfactionLevel || "",
-        productFeatures[i]?.fulfillmentCapacity || "",
-      ];
-    });
-
-    // **Fix Length to 45 Columns**
-    while (productFeaturesData.length < 45) {
-      productFeaturesData.push("");
-    }
-
-    // **Construct rowData with correct columns**
-    let rowData = [
-      name,
-      phone,
-      bikeType,
-      ...rankingsData, // Rankings (15 columns)
-      ...productFeaturesData, // Product Features (45 columns)
-      ageGroup, // Survey Data
-      evChoice, // Survey Data
+    // Correct merge cells for header rows
+    ws["!merges"] = [
+      // Row 1 merges
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, // Personal Information (3 cols)
+      { s: { r: 0, c: 3 }, e: { r: 0, c: 17 } }, // Rankings (15 cols)
+      { s: { r: 0, c: 18 }, e: { r: 0, c: 77 } }, // Product Features (60 cols)
+      { s: { r: 0, c: 78 }, e: { r: 0, c: 79 } }, // Survey Data (2 cols)
     ];
 
-    // **Fix length to exactly 65 columns**
-    while (rowData.length < 65) {
-      rowData.push("");
+    // For each product feature in Row 2, merge the feature name cell with the next 3 cells
+    for (let i = 0; i < 15; i++) {
+      const startCol = 18 + i * 4; // Start at column 18, each feature takes 4 columns
+      ws["!merges"].push({
+        s: { r: 1, c: startCol },
+        e: { r: 1, c: startCol + 3 },
+      });
     }
 
-    // **Debugging Logs**
-    console.log("Product Features Data Processed:", productFeaturesData);
-    console.log("Final Row Data:", rowData);
-    console.log(
-      "Row Data Length:",
-      rowData.length,
-      "Expected:",
-      headerRow2.length
-    );
-
-    // **Get current range & append new row**
-    const range = XLSX.utils.decode_range(ws["!ref"]);
-    const nextRow = range.e.r + 1;
-    XLSX.utils.sheet_add_aoa(ws, [rowData], { origin: nextRow });
-
-    // **Merge Header Cells**
-    if (!ws["!merges"]) ws["!merges"] = [];
-    ws["!merges"].push(
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-      { s: { r: 0, c: 3 }, e: { r: 0, c: 17 } },
-      { s: { r: 0, c: 18 }, e: { r: 0, c: 62 } },
-      { s: { r: 0, c: 63 }, e: { r: 0, c: 64 } }
-    );
-
-    // **Write to Excel**
+    // Write to Excel
     XLSX.writeFile(wb, excelFilePath);
-    console.log("Survey data saved successfully!");
+    console.log(
+      `Successfully saved ${surveys.length} survey entries to Excel!`
+    );
 
-    res.status(200).json({ message: "Survey submitted successfully!" });
+    // Send file as download
+    res.download(excelFilePath, "survey_data.xlsx", (err) => {
+      if (err) {
+        console.error("Error downloading file:", err);
+        res.status(500).json({ error: "Failed to download file" });
+      }
+    });
   } catch (error) {
     console.error("Error saving survey data:", error);
     res.status(500).json({ error: "Failed to save survey data" });
   }
-});
-
-app.get("/download-excel", (req, res) => {
-  res.download(excelFilePath, "survey_data.xlsx");
 });
 
 if (process.env.NODE_ENV === "production") {
